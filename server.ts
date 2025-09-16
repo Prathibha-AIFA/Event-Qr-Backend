@@ -112,7 +112,7 @@ await ticket.save();
         <img src="cid:ticketqr" alt="QR Code" style="width:250px"/>
         <p>Or view your ticket online: <a href="${ticketQRUrl}">${ticketQRUrl}</a></p>
       `;
-      await sendEmail(user.email, "Your Tech Event Ticket", emailHtml);
+      await sendEmail(user.email, "Your Tech Event Ticket", emailHtml, ticket.qrCodeData);
       console.log("[INFO] Email sent successfully");
     } catch (emailErr: unknown) {
       console.error("[ERROR] Failed to send email:", emailErr);
@@ -145,42 +145,40 @@ app.post("/api/auth/register", async (req, res) => {
       userId: user._id,
       eventId: "tech2025",
     });
+  
 
-    // Ticket URL for frontend redirect (show QR)
-const ticketRedirectUrl = `${origin}/ticket/${ticket._id}?showQR=true`;
+// Generate the URLs
+const ticketRedirectUrl = `${origin}/ticket/${ticket._id}?showQR=true`; // redirect to show QR
+const ticketQRUrl = `${origin}/ticket/${ticket._id}`; // QR itself points to details view
 
-// Ticket URL for QR code (scan to show details)
-const ticketQRUrl = `${origin}/ticket/${ticket._id}`;
-
+// Generate QR for scanning (details view)
 ticket.qrCodeData = await generateQR(ticketQRUrl);
 await ticket.save();
-    console.log("[INFO] Ticket created:", ticket._id);
 
-    // Send email
-    const emailHtml = `
-      <h2>Hello ${user.name}</h2>
-      <p>Your Tech Event ticket is ready.</p>
-      <p><strong>Event:</strong> Tech 2025</p>
-      <p><strong>Ticket ID:</strong> ${ticket._id}</p>
-      <img src="cid:ticketqr" alt="QR Code" style="width:250px"/>
-      <p>Or view your ticket online: <a href="${ticketQRUrl}">${ticketQRUrl}</a></p>
-    `;
-    await sendEmail(user.email, "Your Tech Event Ticket", emailHtml, ticket.qrCodeData);
+// Send email
+const emailHtml = `
+  <h2>Hello ${user.name}</h2>
+  <p>Your Tech Event ticket is ready.</p>
+  <p><strong>Event:</strong> Tech 2025</p>
+  <p><strong>Ticket ID:</strong> ${ticket._id}</p>
+  <img src="cid:ticketqr" alt="QR Code" style="width:250px"/>
+  <p>Or view your ticket online: <a href="${ticketRedirectUrl}">${ticketRedirectUrl}</a></p>
+`;
+await sendEmail(user.email, "Your Tech Event Ticket", emailHtml, ticket.qrCodeData);
 
-    res.status(201).json({
-      ticket: {
-        _id: ticket._id,
-        name: user.name,
-        email: user.email,
-        qrCodeData: ticket.qrCodeData,
-      },
-      redirect: ticketRedirectUrl,
-    });
-  } catch (err: unknown) {
-    console.error("[ERROR] Manual registration error:", err);
-    res.status(500).json({ msg: "Server error" });
-  }
+// Return redirect URL for frontend to navigate to QR view
+res.status(201).json({
+  ticket: {
+    _id: ticket._id,
+    name: user.name,
+    email: user.email,
+    qrCodeData: ticket.qrCodeData,
+  },
+  redirect: ticketRedirectUrl, // make sure frontend navigates here
 });
+  }}
+)
+
 
 // Ticket API routes
 app.use("/api/tickets", ticketRoutes);

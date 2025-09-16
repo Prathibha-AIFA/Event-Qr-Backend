@@ -95,9 +95,10 @@ app.get("/google/callback", async (req, res) => {
     });
 
     // Ticket URL for frontend
-    const ticketUrl = `${origin}/ticket/${ticket._id}?showQR=true`;
-    ticket.qrCodeData = await generateQR(ticketUrl);
-    await ticket.save();
+    const ticketRedirectUrl = `${origin}/ticket/${ticket._id}?showQR=true`;
+   const ticketQRUrl = `${origin}/ticket/${ticket._id}`;
+  ticket.qrCodeData = await generateQR(ticketQRUrl);
+await ticket.save();
     console.log("[INFO] Ticket created:", ticket._id);
 
     // Send email
@@ -109,7 +110,7 @@ app.get("/google/callback", async (req, res) => {
         <p><strong>Ticket ID:</strong> ${ticket._id}</p>
         <p><strong>Email:</strong> ${user.email}</p>
         <img src="${ticket.qrCodeData}" alt="QR Code" style="width:250px"/>
-        <p>Or view your ticket online: <a href="${ticketUrl}">${ticketUrl}</a></p>
+        <p>Or view your ticket online: <a href="${ticketQRUrl}">${ticketQRUrl}</a></p>
       `;
       await sendEmail(user.email, "Your Tech Event Ticket", emailHtml);
       console.log("[INFO] Email sent successfully");
@@ -118,7 +119,7 @@ app.get("/google/callback", async (req, res) => {
     }
 
     // Redirect frontend to ticket page with QR
-    res.redirect(ticketUrl);
+    res.redirect(ticketRedirectUrl);
   } catch (err: unknown) {
     console.error(
       "[ERROR] Google OAuth callback error:",
@@ -145,9 +146,14 @@ app.post("/api/auth/register", async (req, res) => {
       eventId: "tech2025",
     });
 
-    const ticketUrl = `${origin}/ticket/${ticket._id}?showQR=true`;
-    ticket.qrCodeData = await generateQR(ticketUrl);
-    await ticket.save();
+    // Ticket URL for frontend redirect (show QR)
+const ticketRedirectUrl = `${origin}/ticket/${ticket._id}?showQR=true`;
+
+// Ticket URL for QR code (scan to show details)
+const ticketQRUrl = `${origin}/ticket/${ticket._id}`;
+
+ticket.qrCodeData = await generateQR(ticketQRUrl);
+await ticket.save();
     console.log("[INFO] Ticket created:", ticket._id);
 
     // Send email
@@ -157,7 +163,7 @@ app.post("/api/auth/register", async (req, res) => {
       <p><strong>Event:</strong> Tech 2025</p>
       <p><strong>Ticket ID:</strong> ${ticket._id}</p>
       <img src="cid:ticketqr" alt="QR Code" style="width:250px"/>
-      <p>Or view your ticket online: <a href="${ticketUrl}">${ticketUrl}</a></p>
+      <p>Or view your ticket online: <a href="${ticketQRUrl}">${ticketQRUrl}</a></p>
     `;
     await sendEmail(user.email, "Your Tech Event Ticket", emailHtml, ticket.qrCodeData);
 
@@ -168,7 +174,7 @@ app.post("/api/auth/register", async (req, res) => {
         email: user.email,
         qrCodeData: ticket.qrCodeData,
       },
-      redirect: ticketUrl,
+      redirect: ticketRedirectUrl,
     });
   } catch (err: unknown) {
     console.error("[ERROR] Manual registration error:", err);

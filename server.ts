@@ -27,6 +27,9 @@ app.use(
   })
 );
 
+app.use('/', (req, res)=>{
+  res.send("hello")
+})
 
 const oauth2Client = new google.auth.OAuth2(
   process.env.CLIENT_ID,
@@ -169,6 +172,7 @@ app.post("/api/auth/register", async (req, res) => {
 
 
 app.use("/api/tickets", ticketRoutes);
+
 
 
 const PORT = process.env.PORT || 5000;

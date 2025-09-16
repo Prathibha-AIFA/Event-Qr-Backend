@@ -27,9 +27,9 @@ app.use(
   })
 );
 
-app.use('/', (req, res)=>{
-  res.send("hello")
-})
+// app.use('/', (req, res)=>{
+//   res.send("hello")
+// })
 
 const oauth2Client = new google.auth.OAuth2(
   process.env.CLIENT_ID,

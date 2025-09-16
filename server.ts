@@ -39,10 +39,13 @@ const oauth2Client = new google.auth.OAuth2(
 
 
 app.get("/google", (req, res) => {
+  const origin = req.query.origin as string;
+
   const url = oauth2Client.generateAuthUrl({
     access_type: "offline",
     scope: ["profile", "email"],
     prompt: "consent",
+    state: origin // use OAuth2 "state" param to carry the frontend origin
   });
 
   console.log("[INFO] Redirecting to Google OAuth URL:", url);
@@ -51,7 +54,10 @@ app.get("/google", (req, res) => {
 
 app.get("/google/callback", async (req, res) => {
   const code = req.query.code as string;
-  const origin = process.env.FRONTEND_URL || "http://localhost:5173";
+  const origin = (req.query.origin as string) 
+            || (req.query.state as string) 
+            || process.env.FRONTEND_URL 
+            || "http://localhost:5173";
 
   if (!code) {
     console.error("[ERROR] No code provided in query parameters");

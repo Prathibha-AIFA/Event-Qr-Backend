@@ -13,13 +13,13 @@ dotenv.config();
 const app = express();
 app.use(express.json());
 
-
+// MongoDB connection
 mongoose
   .connect(process.env.MONGO_URI || "")
   .then(() => console.log("[INFO] MongoDB connected"))
   .catch((err) => console.error("[ERROR] MongoDB connection error:", err));
 
-
+// CORS setup
 app.use(
   cors({
     origin: (origin, callback) => callback(null, true),
@@ -27,17 +27,14 @@ app.use(
   })
 );
 
-// app.use('/', (req, res)=>{
-//   res.send("hello")
-// })
-
+// Google OAuth2 client
 const oauth2Client = new google.auth.OAuth2(
   process.env.CLIENT_ID,
   process.env.CLIENT_SECRET,
   process.env.REDIRECT_URL
 );
 
-
+// Route: Start Google OAuth
 app.get("/google", (req, res) => {
   const origin = req.query.origin as string;
 
@@ -45,19 +42,21 @@ app.get("/google", (req, res) => {
     access_type: "offline",
     scope: ["profile", "email"],
     prompt: "consent",
-    state: origin // use OAuth2 "state" param to carry the frontend origin
+    state: origin, // pass frontend origin through state
   });
 
   console.log("[INFO] Redirecting to Google OAuth URL:", url);
   res.redirect(url);
 });
 
+// Route: Google OAuth callback
 app.get("/google/callback", async (req, res) => {
   const code = req.query.code as string;
-  const origin = (req.query.origin as string) 
-            || (req.query.state as string) 
-            || process.env.FRONTEND_URL 
-            || "http://localhost:5173";
+  const origin =
+    (req.query.origin as string) ||
+    (req.query.state as string) ||
+    process.env.FRONTEND_URL ||
+    "http://localhost:5173";
 
   if (!code) {
     console.error("[ERROR] No code provided in query parameters");
@@ -79,30 +78,30 @@ app.get("/google/callback", async (req, res) => {
       return res.status(400).send("Failed to get user info");
     }
 
+    // Find or create user
     let user = await User.findOne({ email });
     if (!user) {
-      console.log("[INFO] User not found, creating new user...");
+      console.log("[INFO] Creating new user...");
       user = await User.create({ name, email, googleId });
     } else {
       console.log("[INFO] User exists:", user._id);
     }
 
-    console.log("[INFO] Generating ticket URL and QR code...");
-
-
+    // Create ticket
+    console.log("[INFO] Generating ticket and QR code...");
     const ticket = new Ticket({
       userId: user._id,
       eventId: "tech2025",
     });
 
-    const ticketUrl = `${origin}/ticket/${ticket._id}`;
+    // Ticket URL for frontend
+    const ticketUrl = `${origin}/ticket/${ticket._id}?showQR=true`;
     ticket.qrCodeData = await generateQR(ticketUrl);
     await ticket.save();
+    console.log("[INFO] Ticket created:", ticket._id);
 
-    console.log("[INFO] Ticket created with QR code:", ticket._id);
-
+    // Send email
     try {
-      console.log("[INFO] Sending ticket email to user...");
       const emailHtml = `
         <h2>Hello ${user.name}</h2>
         <p>Your Tech Event ticket is ready.</p>
@@ -118,6 +117,7 @@ app.get("/google/callback", async (req, res) => {
       console.error("[ERROR] Failed to send email:", emailErr);
     }
 
+    // Redirect frontend to ticket page with QR
     res.redirect(ticketUrl);
   } catch (err: unknown) {
     console.error(
@@ -128,6 +128,7 @@ app.get("/google/callback", async (req, res) => {
   }
 });
 
+// Manual registration route
 app.post("/api/auth/register", async (req, res) => {
   const { name, email } = req.body;
   const origin = (req.query.origin as string) || process.env.FRONTEND_URL;
@@ -136,20 +137,20 @@ app.post("/api/auth/register", async (req, res) => {
     let user = await User.findOne({ email });
     if (user) return res.status(400).json({ msg: "User already exists" });
 
-    user = await User.create({ name, email, googleId: "manual-registration"  });
+    user = await User.create({ name, email, googleId: "manual-registration" });
 
-    console.log("[INFO] Generating ticket URL and QR code...");
+    console.log("[INFO] Generating ticket and QR code...");
     const ticket = new Ticket({
       userId: user._id,
       eventId: "tech2025",
     });
 
-    const ticketUrl = `${origin}/ticket/${ticket._id}`;
+    const ticketUrl = `${origin}/ticket/${ticket._id}?showQR=true`;
     ticket.qrCodeData = await generateQR(ticketUrl);
     await ticket.save();
+    console.log("[INFO] Ticket created:", ticket._id);
 
-    console.log("[INFO] Ticket created with QR code:", ticket._id);
-
+    // Send email
     const emailHtml = `
       <h2>Hello ${user.name}</h2>
       <p>Your Tech Event ticket is ready.</p>
@@ -159,7 +160,6 @@ app.post("/api/auth/register", async (req, res) => {
       <p>Or view your ticket online: <a href="${ticketUrl}">${ticketUrl}</a></p>
     `;
     await sendEmail(user.email, "Your Tech Event Ticket", emailHtml, ticket.qrCodeData);
-
 
     res.status(201).json({
       ticket: {
@@ -176,10 +176,9 @@ app.post("/api/auth/register", async (req, res) => {
   }
 });
 
-
+// Ticket API routes
 app.use("/api/tickets", ticketRoutes);
 
-
-
+// Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`[INFO] Server running on port ${PORT}`));

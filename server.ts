@@ -145,39 +145,43 @@ app.post("/api/auth/register", async (req, res) => {
       userId: user._id,
       eventId: "tech2025",
     });
-  
 
-// Generate the URLs
-const ticketRedirectUrl = `${origin}/ticket/${ticket._id}?showQR=true`; // redirect to show QR
-const ticketQRUrl = `${origin}/ticket/${ticket._id}`; // QR itself points to details view
+    // Generate the URLs
+    const ticketRedirectUrl = `${origin}/ticket/${ticket._id}?showQR=true`; // redirect to show QR
+    const ticketQRUrl = `${origin}/ticket/${ticket._id}`; // QR points to details view
 
-// Generate QR for scanning (details view)
-ticket.qrCodeData = await generateQR(ticketQRUrl);
-await ticket.save();
+    // Generate QR code
+    ticket.qrCodeData = await generateQR(ticketQRUrl);
+    await ticket.save();
 
-// Send email
-const emailHtml = `
-  <h2>Hello ${user.name}</h2>
-  <p>Your Tech Event ticket is ready.</p>
-  <p><strong>Event:</strong> Tech 2025</p>
-  <p><strong>Ticket ID:</strong> ${ticket._id}</p>
-  <img src="cid:ticketqr" alt="QR Code" style="width:250px"/>
-  <p>Or view your ticket online: <a href="${ticketRedirectUrl}">${ticketRedirectUrl}</a></p>
-`;
-await sendEmail(user.email, "Your Tech Event Ticket", emailHtml, ticket.qrCodeData);
+    // Send email
+    const emailHtml = `
+      <h2>Hello ${user.name}</h2>
+      <p>Your Tech Event ticket is ready.</p>
+      <p><strong>Event:</strong> Tech 2025</p>
+      <p><strong>Ticket ID:</strong> ${ticket._id}</p>
+      <img src="cid:ticketqr" alt="QR Code" style="width:250px"/>
+      <p>Or view your ticket online: <a href="${ticketRedirectUrl}">${ticketRedirectUrl}</a></p>
+    `;
+    await sendEmail(user.email, "Your Tech Event Ticket", emailHtml, ticket.qrCodeData);
 
-// Return redirect URL for frontend to navigate to QR view
-res.status(201).json({
-  ticket: {
-    _id: ticket._id,
-    name: user.name,
-    email: user.email,
-    qrCodeData: ticket.qrCodeData,
-  },
-  redirect: ticketRedirectUrl, // make sure frontend navigates here
+    // Return redirect URL for frontend
+    res.status(201).json({
+      ticket: {
+        _id: ticket._id,
+        name: user.name,
+        email: user.email,
+        qrCodeData: ticket.qrCodeData,
+      },
+      redirect: ticketRedirectUrl,
+    });
+
+  } catch (err: unknown) {
+    console.error("[ERROR] Manual registration error:", err);
+    res.status(500).json({ msg: "Server error" });
+  }
 });
-  }}
-)
+
 
 
 // Ticket API routes

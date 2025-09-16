@@ -4,7 +4,7 @@ export const sendEmail = async (
   to: string,
   subject: string,
   html: string,
-  qrCodeData?: string 
+  qrCodeData?: string
 ) => {
   try {
     const transporter = nodemailer.createTransport({
@@ -15,22 +15,30 @@ export const sendEmail = async (
       },
     });
 
-    // prepare attachments if qrCodeData exists
+    // Prepare attachments if qrCodeData exists
     const attachments = qrCodeData
       ? [
           {
             filename: "ticket.png",
             content: Buffer.from(qrCodeData.split(",")[1], "base64"),
-            cid: "ticketqr", // reference in HTML with <img src="cid:ticketqr">
+            cid: "ticketqr", // <img src="cid:ticketqr" />
           },
         ]
       : [];
+
+    // Replace <img src="cid:ticketqr"> in html if qrCodeData exists
+    const finalHtml = qrCodeData
+      ? html.replace(
+          /<img src="[^"]*"[^>]*>/,
+          `<img src="cid:ticketqr" alt="QR Code" style="width:250px"/>`
+        )
+      : html;
 
     const info = await transporter.sendMail({
       from: process.env.GMAIL_USER,
       to,
       subject,
-      html,
+      html: finalHtml,
       attachments,
     });
 

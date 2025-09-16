@@ -1,2 +1,9 @@
 .env
-node_modules
+node_modulesBackend/serviceAccountKey.json
+node_modules/
+dist/
+.env
+Backend/serviceAccountKey.json
+
+
+BackendClean/

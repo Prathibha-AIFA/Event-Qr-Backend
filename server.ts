@@ -110,7 +110,7 @@ await ticket.save();
         <p><strong>Ticket ID:</strong> ${ticket._id}</p>
         <p><strong>Email:</strong> ${user.email}</p>
         <img src="cid:ticketqr" alt="QR Code" style="width:250px"/>
-        <p>Or view your ticket online: <a href="${ticketQRUrl}">${ticketQRUrl}</a></p>
+        <p>Or view your ticket online: <a href="${ticketRedirectUrl}">${ticketRedirectUrl}</a></p>
       `;
       await sendEmail(user.email, "Your Tech Event Ticket", emailHtml, ticket.qrCodeData);
       console.log("[INFO] Email sent successfully");
